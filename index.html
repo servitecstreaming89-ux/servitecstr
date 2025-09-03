@@ -316,7 +316,29 @@
     <a href="https://wa.me/573103755031" class="whatsapp-float" target="_blank">
         <i class="fab fa-whatsapp"></i>
     </a>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
 
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDVfOtNhGt0QhMPdSPvdlG0-7kZQjz1zJs",
+    authDomain: "servitec-streaming.firebaseapp.com",
+    projectId: "servitec-streaming",
+    storageBucket: "servitec-streaming.firebasestorage.app",
+    messagingSenderId: "74459245860",
+    appId: "1:74459245860:web:6bd5e3dc91f9f2286dd7b1",
+    measurementId: "G-2CS1ZJJLS7"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
     <script src="script.js"></script>
 </body>
 </html>
