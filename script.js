@@ -389,4 +389,125 @@ function uploadStreaming() {
         }
     });
 }
+// === Helpers Firebase ===
+function ensureFirebase() {
+  if (!window.firebaseAPI) {
+    console.error("Firebase no está disponible. Revisa el bloque <script type='module'> en index.html.");
+    alert("Error: Firebase no está configurado. Verifica el paso 4 en index.html.");
+    return null;
+  }
+  return window.firebaseAPI;
+}
+
+function renderPreview(url, mime, container) {
+  if (mime && mime.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = "archivo subido";
+    img.classList.add('gallery-item');
+    container.appendChild(img);
+  } else if (mime && mime.startsWith('video/')) {
+    const video = document.createElement('video');
+    video.src = url;
+    video.controls = true;
+    video.classList.add('gallery-item');
+    container.appendChild(video);
+  } else {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = "_blank";
+    a.textContent = "Ver archivo";
+    container.appendChild(a);
+  }
+}
+// Sube todos los archivos seleccionados y los muestra en la galería
+function uploadFilesToFirebase(inputId, galleryId, folder) {
+  const api = ensureFirebase();
+  if (!api) return;
+
+  const { storage, ref, uploadBytesResumable, getDownloadURL } = api;
+
+  const input = document.getElementById(inputId);
+  const gallery = document.getElementById(galleryId);
+
+  if (!input || !gallery) {
+    console.error("No se encontró input o gallery:", inputId, galleryId);
+    return;
+  }
+
+  Array.from(input.files).forEach(file => {
+    // Prefijo de tiempo para evitar archivos con el mismo nombre
+    const fileRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
+    const task = uploadBytesResumable(fileRef, file);
+
+    // (Opcional) indicador de progreso por archivo
+    const progress = document.createElement('div');
+    progress.textContent = `Subiendo ${file.name}... 0%`;
+    progress.style.fontSize = "0.9rem";
+    progress.style.margin = "6px 0";
+    gallery.appendChild(progress);
+
+    task.on('state_changed',
+      (snap) => {
+        const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+        progress.textContent = `Subiendo ${file.name}... ${pct}%`;
+      },
+      (err) => {
+        console.error("Error al subir:", err);
+        progress.textContent = `❌ Error subiendo ${file.name}`;
+      },
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref);
+          progress.remove();                  // quita el texto de progreso
+          renderPreview(url, file.type, gallery); // muestra imagen/video
+        } catch (e) {
+          console.error("Error al obtener URL:", e);
+          progress.textContent = `❌ Error al obtener URL de ${file.name}`;
+        }
+      }
+    );
+  });
+}
+// Conecta con tus botones actuales:
+function uploadServicios() {
+  uploadFilesToFirebase('serviciosUpload', 'serviciosGallery', 'servicios');
+}
+
+function uploadStreaming() {
+  uploadFilesToFirebase('streamingUpload', 'streamingGallery', 'streaming');
+}
+// Lista todo lo que haya en una carpeta y lo renderiza
+async function loadGalleryFromFirebase(folder, galleryId) {
+  const api = ensureFirebase();
+  if (!api) return;
+  const { storage, ref, listAll, getDownloadURL } = api;
+
+  const gallery = document.getElementById(galleryId);
+  if (!gallery) return;
+
+  try {
+    const folderRef = ref(storage, folder);
+    const { items } = await listAll(folderRef);
+
+    for (const itemRef of items) {
+      const url = await getDownloadURL(itemRef);
+      // No conocemos el MIME aquí; probamos como imagen por defecto
+      // (si es video, el usuario lo abrirá en nueva pestaña)
+      renderPreview(url, "image/*", gallery);
+    }
+  } catch (e) {
+    console.error(`Error listando ${folder}:`, e);
+  }
+}
+
+// Llama al cargar la página (si existen las galerías)
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('serviciosGallery')) {
+    loadGalleryFromFirebase('servicios', 'serviciosGallery');
+  }
+  if (document.getElementById('streamingGallery')) {
+    loadGalleryFromFirebase('streaming', 'streamingGallery');
+  }
+});
 
